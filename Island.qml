@@ -1039,8 +1039,15 @@ Item {
     }
     return v
   }
+  // The expanded views carry a strip of shortcuts to the other views.
+  readonly property int switcherExtra: 34
+  readonly property var switcherViews: ["media-expanded", "idle-expanded", "clock-expanded",
+    "activity-expanded", "recording-expanded", "recording-media-expanded",
+    "outputs-expanded", "calendar-expanded", "inbox-expanded"]
+
   function slotSize(name) {
     var v = Model.sizeFor(name, viewCounts, notchSize)
+    if (switcherViews.indexOf(name) !== -1) v = { w: v.w, h: v.h + switcherExtra, r: v.r }
     if (notificationWraps && (name === "notification" || name === "notification-actions"))
       return { w: v.w, h: v.h + 18, r: v.r }
     return v
@@ -1106,9 +1113,30 @@ Item {
     }
   }
 
+  // Open one named view of the island: media, panel, outputs, timer,
+  // activity, recording, calendar or inbox. Used by the switcher strip.
+  function setView(name) {
+    inboxOpen = false
+    outputsOpen = false
+    calendarOpen = false
+    openFocus = ""
+    if (name === "inbox") openInbox()
+    else if (name === "outputs") openOutputs()
+    else if (name === "calendar") openCalendar()
+    else {
+      if (name !== "recording") openFocus = name
+      expand()
+    }
+  }
+
   function islandClicked(button) {
     if (button === Qt.MiddleButton) {
       if (hasMedia) mediaToggle()
+      return
+    }
+    // Right click goes straight to the panel (time, timers, calendar).
+    if (button === Qt.RightButton) {
+      setView("panel")
       return
     }
     // The bell owns the pill when nothing else is live: open the inbox.
@@ -1268,6 +1296,7 @@ Item {
     }
     function collapse(): string { root.collapse(); return "ok" }
     function toggle(): string { root.toggleExpanded(); return "ok" }
+    function view(name: string): string { root.setView(name); return "ok" }
     function toast(title: string, body: string, icon: string, color: string): string {
       root.toast({ title: title, body: body, icon: icon, color: color })
       return "ok"
@@ -1631,18 +1660,24 @@ Item {
 
           ViewSlot {
             active: root.showing("media-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("media-expanded").w); height: root.s(root.slotSize("media-expanded").h)
             MediaExpanded { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("recording-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("recording-expanded").w); height: root.s(root.slotSize("recording-expanded").h)
             RecordingExpanded { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("recording-media-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("recording-media-expanded").w); height: root.s(root.slotSize("recording-media-expanded").h)
             RecordingExpanded { anchors.fill: parent; island: root }
           }
@@ -1667,6 +1702,8 @@ Item {
 
           ViewSlot {
             active: root.showing("inbox-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("inbox-expanded").w); height: root.s(root.slotSize("inbox-expanded").h)
             InboxView { anchors.fill: parent; island: root }
           }
@@ -1697,30 +1734,40 @@ Item {
 
           ViewSlot {
             active: root.showing("clock-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("clock-expanded").w); height: root.s(root.slotSize("clock-expanded").h)
             ClockExpanded { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("activity-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("activity-expanded").w); height: root.s(root.slotSize("activity-expanded").h)
             ActivityExpanded { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("outputs-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("outputs-expanded").w); height: root.s(root.slotSize("outputs-expanded").h)
             OutputsView { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("calendar-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("calendar-expanded").w); height: root.s(root.slotSize("calendar-expanded").h)
             CalendarView { anchors.fill: parent; island: root }
           }
 
           ViewSlot {
             active: root.showing("idle-expanded")
+            island: root
+            switcherHeight: root.s(root.switcherExtra)
             width: root.s(root.slotSize("idle-expanded").w); height: root.s(root.slotSize("idle-expanded").h)
             IdleExpanded { anchors.fill: parent; island: root }
           }

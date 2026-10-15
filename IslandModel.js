@@ -53,6 +53,11 @@ function viewFor(state) {
   if (state.userExpanded && state.outputsOpen) return "outputs-expanded"
   if (state.userExpanded && state.calendarOpen) return "calendar-expanded"
   if (state.userExpanded) {
+    // A view picked from the switcher wins, even over a live recording.
+    if (state.focus === "panel") return "idle-expanded"
+    if (state.focus === "media" && state.hasMedia) return "media-expanded"
+    if (state.focus === "timer" || state.focus === "stopwatch") return "clock-expanded"
+    if (state.focus === "activity") return "activity-expanded"
     // Recording takes the top of an opened island so it can be stopped from
     // there; music, if any, rides along underneath.
     if (state.recording) return state.hasMedia ? "recording-media-expanded" : "recording-expanded"

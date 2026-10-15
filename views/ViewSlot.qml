@@ -10,6 +10,31 @@ Item {
 
   property bool active: false
 
+  // Set on the expanded views: the island, and how tall the strip of view
+  // shortcuts at the bottom of the slot is. The view itself keeps the rest.
+  property var island: null
+  property real switcherHeight: 0
+
+  default property alias content: body.data
+
+  Item {
+    id: body
+    anchors.fill: parent
+    anchors.bottomMargin: slot.island ? slot.switcherHeight : 0
+  }
+
+  // Built only for the slots that were given an island, so the compact
+  // views carry no switcher at all.
+  Loader {
+    active: slot.island !== null
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: slot.switcherHeight
+
+    sourceComponent: ViewSwitcher { island: slot.island }
+  }
+
   // Centered, but on whole device pixels (the parent says how big one is),
   // so text and edges inside don't land between pixels.
   readonly property real dpr: parent && parent.dpr > 0 ? parent.dpr : 1
