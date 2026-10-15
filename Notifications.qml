@@ -82,6 +82,11 @@ Item {
       else addToInbox(entry)
       return
     }
+    // The chime, as the personal clone had it: silent under Do Not Disturb
+    // (a bypass still pops, quietly) or when the sender sets suppress-sound.
+    var silent = doNotDisturb || Model.stringHint(n.hints, "suppress-sound") === "true"
+    if (!silent)
+      Quickshell.execDetached(["paplay", "--volume=39322", Quickshell.env("HOME") + "/.local/share/omarchy-personal/sounds/notification.wav"])
     banners = [entry].concat(banners)
   }
 
