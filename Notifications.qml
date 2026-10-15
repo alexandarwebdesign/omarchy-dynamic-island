@@ -131,11 +131,14 @@ Item {
     return entry.app === "omarchy-action" || (entry.app === "notify-send" && entry.critical)
   }
 
-  // How long a banner holds, iOS short. Critical ones stay until handled; a
+  // How long a banner holds: 3s plus 55ms per character, kept between 4 and
+  // 10s; low priority gets two thirds. Critical ones stay until handled; a
   // sender's own longer timeout is honoured.
   function durationFor(entry) {
     if (!entry || entry.critical) return 0
-    var base = entry.low ? 4000 : 6000
+    var chars = String(entry.summary || "").length + String(entry.body || "").length
+    var base = Math.min(10000, Math.max(4000, 3000 + 55 * chars))
+    if (entry.low) base = Math.round(base * 2 / 3)
     return Math.min(30000, Math.max(base, entry.timeout > 0 ? entry.timeout : 0))
   }
 

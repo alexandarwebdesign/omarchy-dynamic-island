@@ -30,7 +30,7 @@ Item {
   Behavior on scale {
     SequentialAnimation {
       PauseAnimation { duration: slot.active ? 40 : 0 }
-      NumberAnimation { duration: slot.active ? 380 : 90; easing.type: slot.active ? Easing.OutBack : Easing.InCubic; easing.overshoot: 1.1 }
+      NumberAnimation { duration: slot.active ? 300 : 200; easing.type: Easing.OutCubic }
     }
   }
 

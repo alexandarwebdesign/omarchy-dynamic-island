@@ -7,12 +7,12 @@
 // these; `r` is the corner radius, which for the compact views is half the
 // height so the shape stays a true capsule.
 var sizes = {
-  "idle":          { w: 126, h: 32, r: 16 },
-  "idle-hover":    { w: 138, h: 34, r: 17 },
-  "hidden":        { w: 0,   h: 32, r: 16 },
-  "media":         { w: 300, h: 32, r: 16 },
-  "recording":     { w: 232, h: 32, r: 16 },
-  "mic":           { w: 214, h: 32, r: 16 },
+  "idle":          { w: 126, h: 26, r: 13 },
+  "idle-hover":    { w: 138, h: 28, r: 14 },
+  "hidden":        { w: 0,   h: 26, r: 13 },
+  "media":         { w: 300, h: 26, r: 13 },
+  "recording":     { w: 232, h: 26, r: 13 },
+  "mic":           { w: 214, h: 26, r: 13 },
   "hud-progress":  { w: 310, h: 36, r: 18 },
   "hud-label":     { w: 310, h: 36, r: 18 },
   "hud-track":     { w: 368, h: 66, r: 28 },
@@ -21,16 +21,16 @@ var sizes = {
   "recording-expanded": { w: 392, h: 76, r: 34 },
   "recording-media-expanded": { w: 404, h: 145, r: 40 },
   "idle-expanded": { w: 424, h: 150, r: 40 },
-  "notification":  { w: 404, h: 78, r: 34 },
-  "inbox":         { w: 200, h: 32, r: 16 },
-  "timer":         { w: 236, h: 32, r: 16 },
-  "stopwatch":     { w: 236, h: 32, r: 16 },
-  "activity":      { w: 256, h: 32, r: 16 },
-  "calendar":      { w: 300, h: 32, r: 16 },
+  "notification":  { w: 404, h: 70, r: 34 },
+  "inbox":         { w: 200, h: 26, r: 13 },
+  "timer":         { w: 236, h: 26, r: 13 },
+  "stopwatch":     { w: 236, h: 26, r: 13 },
+  "activity":      { w: 256, h: 26, r: 13 },
+  "calendar":      { w: 300, h: 26, r: 13 },
   "clock-expanded": { w: 380, h: 132, r: 40 },
   "activity-expanded": { w: 392, h: 104, r: 38 },
   "calendar-expanded": { w: 500, h: 262, r: 40 },
-  "notification-actions": { w: 404, h: 118, r: 38 }
+  "notification-actions": { w: 404, h: 110, r: 38 }
 }
 
 // Compact activities in priority order. The first one present owns the pill;
@@ -44,10 +44,11 @@ function activities(flags) {
   return out
 }
 
-// Which view the island shows. Transient HUDs win over everything except an
-// island the user deliberately opened, since a volume tick while reading the
-// expanded player should not throw the player away.
+// Which view the island shows. A volume/brightness tick is shown even over an
+// island the user opened, so the key press is never silent; the opened view
+// comes back when the tick clears. Other HUDs wait for an opened island.
 function viewFor(state) {
+  if (state.hud && state.hud.layout === "progress") return "hud-progress"
   if (state.userExpanded && state.inboxOpen) return "inbox-expanded"
   if (state.userExpanded && state.outputsOpen) return "outputs-expanded"
   if (state.userExpanded && state.calendarOpen) return "calendar-expanded"

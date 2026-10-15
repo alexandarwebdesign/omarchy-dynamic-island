@@ -7,7 +7,10 @@ Item {
 
   property var island: null
   readonly property var hud: island.hud || ({})
-  readonly property real value: Math.max(0, Math.min(1, Number(hud.value) || 0))
+  // Volume can go to 150%, so its bar spans 0-150%; the rest span 0-100%.
+  readonly property real maxValue: hud.key === "volume" ? 1.5 : 1
+  readonly property real value: Math.max(0, Math.min(maxValue, Number(hud.value) || 0))
+  readonly property bool boosted: hud.key === "volume" && value > 1.001
 
   Text {
     id: glyph
@@ -54,8 +57,9 @@ Item {
     Rectangle {
       height: parent.height
       radius: height / 2
-      width: Math.max(view.value > 0 ? height : 0, parent.width * view.value)
-      color: view.hud.color || island.fg
+      width: Math.max(view.value > 0 ? height : 0, parent.width * view.value / view.maxValue)
+      // Above 100% the fill is 16% lighter.
+      color: view.boosted ? Qt.lighter(view.hud.color || island.fg, 1.16) : (view.hud.color || island.fg)
 
       Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
     }

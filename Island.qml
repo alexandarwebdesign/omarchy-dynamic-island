@@ -320,7 +320,6 @@ Item {
 
   onChargingChanged: {
     if (!ready || !showCharging || !charging) return
-    edgeSweep++
     showHud({
       key: "power",
       layout: "label",
@@ -936,13 +935,23 @@ Item {
     text: root.idleItem ? root.idleItem.text : ""
   }
 
+  // Does the notification body need a second line? Then the card grows by
+  // one text line (see slotSize). 292 is the text column's width in the card.
+  TextMetrics {
+    id: bodyMetrics
+    font.family: root.textFamily
+    font.pixelSize: root.f(14)
+    text: root.notification ? Model.plainText(root.notification.body || "") : ""
+  }
+  readonly property bool notificationWraps: bodyMetrics.advanceWidth > root.s(292)
+
   // ------------------------------------------------------------------
   // Edge light: what the lip of the island says about the current state.
   // ------------------------------------------------------------------
   readonly property var edgeState: {
     var v = view
     if (v === "hud-progress" && hud)
-      return { tone: hud.color || fg, level: 0.95, progress: Math.max(0, Math.min(1, Number(hud.value) || 0)) }
+      return { tone: hud.color || fg, level: 0 }
     if (v === "timer" || (v === "clock-expanded" && clockSource.timerActive))
       return { tone: orangeColor, level: clockSource.timerPaused ? 0.35 : 0.95, progress: 1 - clockSource.timerProgress }
     if (v === "stopwatch" || v === "clock-expanded")
@@ -954,11 +963,11 @@ Item {
     if (v === "activity" || v === "activity-expanded")
       return { tone: activity ? toneFor(activity.color) : accentColor, level: 0.8, pulse: true, period: 1800 }
     if (v === "media" || v === "hud-track" || v === "media-expanded")
-      return { tone: mediaTint, level: mediaPlaying ? (v === "media-expanded" ? 0.6 : 0.9) : 0.25, pulse: mediaPlaying, period: 900 }
+      return { tone: mediaTint, level: 0 }
     if (v === "notification" || v === "notification-actions")
-      return { tone: notification && notification.critical ? urgentColor : accentColor, level: 0.55 }
-    if (v === "hud-label" && hud)
-      return { tone: hud.color || accentColor, level: 0.85 }
+      return { tone: notification && notification.critical ? urgentColor : accentColor, level: 0.95, pulse: true, period: 1600 }
+    if ((v === "hud-label" || v === "hud-toast") && hud)
+      return { tone: hud.color || accentColor, level: 0 }
     if (v === "mic")
       return { tone: cameraActive ? greenColor : orangeColor, level: 0.85, pulse: true, period: 2400 }
     if (v === "calendar")
@@ -966,14 +975,9 @@ Item {
     if (v === "inbox")
       return { tone: accentColor, level: 0.6 }
     if (v === "idle" || v === "idle-hover")
-      return { tone: accentColor, level: v === "idle-hover" ? 0.6 : 0.32 }
+      return { tone: accentColor, level: 0 }
     return { tone: accentColor, level: 0.2 }
   }
-  property int edgeSweep: 0
-
-  // A bead of light runs along the lip when something arrives.
-  onNotificationChanged: if (notification) edgeSweep++
-
   // ------------------------------------------------------------------
   // State
   // ------------------------------------------------------------------
@@ -1025,7 +1029,7 @@ Item {
   })
   readonly property var viewCounts: ({ inbox: inbox.length, outputs: audioOutputs.length })
   readonly property var viewSize: {
-    var v = Model.sizeFor(view, viewCounts, notchSize)
+    var v = slotSize(view)
     // The resting pill grows to fit what the ticker is showing, so the
     // island breathes a little as the glances change.
     if ((view === "idle" || view === "idle-hover") && (idleFace === "ticker" || idleFace === "clock")) {
@@ -1035,7 +1039,12 @@ Item {
     }
     return v
   }
-  function slotSize(name) { return Model.sizeFor(name, viewCounts, notchSize) }
+  function slotSize(name) {
+    var v = Model.sizeFor(name, viewCounts, notchSize)
+    if (notificationWraps && (name === "notification" || name === "notification-actions"))
+      return { w: v.w, h: v.h + 18, r: v.r }
+    return v
+  }
   readonly property bool showBubble: secondary !== "" && !userExpanded && hud === null
 
   function showHud(next) {
@@ -1183,8 +1192,8 @@ Item {
     } else if (kind === "idle-expanded") {
       demo = { media: null, recording: false, mic: false }; expand()
     } else if (kind === "volume" || kind.indexOf("volume:") === 0) {
-      var vol = kind.indexOf(":") > 0 ? Math.max(0, Math.min(100, parseInt(kind.split(":")[1], 10) || 0)) / 100 : 0.62
-      showHud({ layout: "progress", icon: Model.volumeIcon(vol, false), value: vol, valueText: Math.round(vol * 100) + "%", color: fg, duration: 1600 })
+      var vol = kind.indexOf(":") > 0 ? Math.max(0, Math.min(150, parseInt(kind.split(":")[1], 10) || 0)) / 100 : 0.62
+      showHud({ key: "volume", layout: "progress", icon: Model.volumeIcon(vol, false), value: vol, valueText: Math.round(vol * 100) + "%", color: fg, duration: 1600 })
     } else if (kind === "brightness") {
       showHud({ layout: "progress", icon: Model.brightnessIcon(0.8), value: 0.8, valueText: "80%", color: fg, duration: 2500 })
     } else if (kind === "charging") {
@@ -1377,7 +1386,7 @@ Item {
     // takes focus from the app you're in.
     WlrLayershell.keyboardFocus: root.calendarTyping ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     exclusionMode: root.reserveSpace ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: root.reserveSpace ? root.s(32) + root.topMargin : 0
+    exclusiveZone: root.reserveSpace ? root.s(26) + root.topMargin : 0
 
     // Esc always hands the keyboard back, wherever focus is inside.
     Shortcut {
@@ -1395,15 +1404,15 @@ Item {
       id: stage
       anchors.fill: parent
 
-      // The spring: each dimension chases the current view's target with a
-      // little overshoot, which is most of what makes it feel like iOS.
+      // Each dimension eases out to the current view's target: 300ms when it
+      // grows, 200ms when it shrinks. No overshoot.
       property real w: root.s(root.viewSize.w)
       property real h: root.s(root.viewSize.h)
       property real r: root.s(root.viewSize.r)
 
-      Behavior on w { SpringAnimation { spring: 3.4; damping: 0.28; mass: 1.0; epsilon: 0.25 } }
-      Behavior on h { SpringAnimation { spring: 3.4; damping: 0.32; mass: 1.0; epsilon: 0.25 } }
-      Behavior on r { SpringAnimation { spring: 3.4; damping: 0.32; mass: 1.0; epsilon: 0.25 } }
+      Behavior on w { NumberAnimation { duration: root.s(root.viewSize.w) > stage.w ? 300 : 200; easing.type: Easing.OutCubic } }
+      Behavior on h { NumberAnimation { duration: root.s(root.viewSize.h) > stage.h ? 300 : 200; easing.type: Easing.OutCubic } }
+      Behavior on r { NumberAnimation { duration: root.s(root.viewSize.r) > stage.r ? 300 : 200; easing.type: Easing.OutCubic } }
 
       readonly property real earSize: root.s(9)
 
@@ -1535,7 +1544,7 @@ Item {
         scale: islandPress.pressed ? 0.965 : 1
         transformOrigin: Item.Top
 
-        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+        Behavior on scale { NumberAnimation { duration: (islandPress.pressed ? 0.965 : 1) > island.scale ? 300 : 200; easing.type: Easing.OutCubic } }
         Behavior on opacity { NumberAnimation { duration: 160 } }
 
         HoverHandler { id: islandHover }
@@ -1568,7 +1577,6 @@ Item {
             progress: root.edgeState.progress === undefined ? -1 : root.edgeState.progress
             pulse: root.edgeState.pulse === true
             pulsePeriod: root.edgeState.period || 1400
-            sweepKey: root.edgeSweep
           }
 
           // The resting face follows the island's own size (it never waits
@@ -1723,13 +1731,13 @@ Item {
       Rectangle {
         id: bubble
 
-        readonly property real d: root.s(32)
-        readonly property real restX: island.x + island.width + root.s(8)
+        readonly property real d: root.s(26)
+        readonly property real restX: island.x + island.width + root.s(3)
 
         width: d
         height: d
         radius: d / 2
-        y: root.notch ? root.s(4) : root.topMargin
+        y: root.topMargin
         x: root.showBubble ? restX : island.x + island.width - d
         gradient: Gradient {
           GradientStop { position: 0; color: root.surfaceTop }
@@ -1742,9 +1750,9 @@ Item {
         visible: opacity > 0.01
         clip: true
 
-        Behavior on x { SpringAnimation { spring: 3.4; damping: 0.3; epsilon: 0.25 } }
+        Behavior on x { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
         Behavior on opacity { NumberAnimation { duration: 200 } }
-        Behavior on scale { NumberAnimation { duration: 320; easing.type: Easing.OutBack } }
+        Behavior on scale { NumberAnimation { duration: (root.showBubble ? 1 : 0.4) > bubble.scale ? 300 : 200; easing.type: Easing.OutCubic } }
 
         BubbleContent {
           anchors.fill: parent

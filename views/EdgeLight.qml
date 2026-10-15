@@ -5,8 +5,6 @@ import qs.Commons
 // Its color, brightness and shape say what the island is doing:
 //   glow      - a soft centered line (idle, playing, recording)
 //   progress  - fills from the left (timer, volume, a script's progress)
-//   sweep     - a bright bead runs across once (a notification arrives,
-//               the charger is plugged in)
 // Vector rectangles and gradients only, so it stays crisp.
 Item {
   id: edge
@@ -16,7 +14,6 @@ Item {
   property real progress: -1        // 0..1, or -1 for a glow
   property bool pulse: false        // breathe (recording, playing)
   property real pulsePeriod: 1400
-  property int sweepKey: 0          // change it to run one sweep
 
   height: 2
 
@@ -74,31 +71,5 @@ Item {
 
       Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
     }
-  }
-
-  // Sweep: one bead of light across the lip.
-  Rectangle {
-    id: bead
-    height: parent.height
-    width: parent.width * 0.32
-    radius: height / 2
-    x: -width
-    opacity: 0
-    gradient: Gradient {
-      orientation: Gradient.Horizontal
-      GradientStop { position: 0.0; color: Util.alpha(edge.tone, 0) }
-      GradientStop { position: 0.6; color: Qt.lighter(edge.tone, 1.25) }
-      GradientStop { position: 1.0; color: Util.alpha(edge.tone, 0) }
-    }
-  }
-
-  onSweepKeyChanged: sweep.restart()
-
-  SequentialAnimation {
-    id: sweep
-    PropertyAction { target: bead; property: "x"; value: -bead.width }
-    PropertyAction { target: bead; property: "opacity"; value: 1 }
-    NumberAnimation { target: bead; property: "x"; to: edge.width; duration: 900; easing.type: Easing.InOutCubic }
-    PropertyAction { target: bead; property: "opacity"; value: 0 }
   }
 }

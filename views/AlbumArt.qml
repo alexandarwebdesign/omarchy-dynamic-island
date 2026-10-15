@@ -21,6 +21,11 @@ Item {
   // so they are drawn as-is instead of cropped into a rounded tile.
   readonly property bool themeIcon: source.indexOf("image://icon/") === 0
 
+  // The caller can ask for the same treatment for any image that carries its
+  // own shape and transparency (an app icon given as a file path).
+  property bool bare: false
+  readonly property bool asIs: themeIcon || bare
+
   // Decode at twice the on-screen size so 1.25x/1.5x/2x screens all get
   // real pixels; the scene graph filters it down smoothly.
   readonly property int decodeSize: Math.max(64, Math.ceil(Math.max(width, height) * 2))
@@ -29,11 +34,11 @@ Item {
     id: image
     width: art.width
     height: art.height
-    visible: art.themeIcon
+    visible: art.asIs
     source: art.source
     // With both sourceSize dimensions set, PreserveAspectCrop decodes the
     // image already cropped to a square, so the texture is exactly the tile.
-    fillMode: art.themeIcon ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+    fillMode: art.asIs ? Image.PreserveAspectFit : Image.PreserveAspectCrop
     sourceSize.width: art.decodeSize
     sourceSize.height: art.decodeSize
     asynchronous: true
@@ -45,7 +50,7 @@ Item {
   Shape {
     anchors.fill: parent
     preferredRendererType: Shape.CurveRenderer
-    visible: !(art.themeIcon && image.status === Image.Ready)
+    visible: !(art.asIs && image.status === Image.Ready)
 
     ShapePath {
       strokeWidth: 0
@@ -60,7 +65,7 @@ Item {
   // empty texture and paints white.
   Loader {
     anchors.fill: parent
-    active: !art.themeIcon && image.status === Image.Ready
+    active: !art.asIs && image.status === Image.Ready
 
     sourceComponent: Shape {
       preferredRendererType: Shape.CurveRenderer

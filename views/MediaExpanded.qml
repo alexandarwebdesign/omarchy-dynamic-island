@@ -14,61 +14,6 @@ Item {
   readonly property real progress: island.mediaLength > 0
     ? Math.max(0, Math.min(1, island.mediaPosition / island.mediaLength)) : 0
 
-  // The cover, blurred into a soft wash behind the player (Apple Music
-  // style). Only this backdrop goes through a blur; it is painted into a
-  // vector shape with the island's corners, so the edges stay crisp.
-  readonly property real corner: island.s(42)
-
-  Image {
-    id: washSource
-    visible: false
-    width: view.width
-    height: view.height
-    source: island.mediaArt
-    sourceSize.width: 96
-    sourceSize.height: 96
-    fillMode: Image.PreserveAspectCrop
-    asynchronous: true
-  }
-
-  MultiEffect {
-    id: washBlur
-    width: view.width
-    height: view.height
-    source: washSource
-    blurEnabled: true
-    blur: 1.0
-    blurMax: 64
-    saturation: 0.45
-  }
-
-  ShaderEffectSource {
-    id: washTexture
-    sourceItem: washBlur
-    hideSource: true
-    visible: false
-  }
-
-  Shape {
-    anchors.fill: parent
-    visible: washSource.status === Image.Ready
-    opacity: 0.42
-    preferredRendererType: Shape.CurveRenderer
-
-    ShapePath {
-      strokeWidth: 0
-      strokeColor: "transparent"
-      fillItem: washTexture
-      PathRectangle {
-        x: 0; y: 0; width: view.width; height: view.height
-        topLeftRadius: island.notch ? 0 : view.corner
-        topRightRadius: island.notch ? 0 : view.corner
-        bottomLeftRadius: view.corner
-        bottomRightRadius: view.corner
-      }
-    }
-  }
-
   AlbumArt {
     id: art
     x: view.pad
@@ -256,7 +201,7 @@ Item {
       color: island.fg
       scale: playMouse.pressed ? 0.9 : (playMouse.containsMouse ? 1.05 : 1)
 
-      Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
+      Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.BezierSpline; easing.bezierCurve: [0, 0, 0.2, 1, 1, 1] } }
 
       Text {
         anchors.centerIn: parent
